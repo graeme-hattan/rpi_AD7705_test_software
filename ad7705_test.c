@@ -16,7 +16,6 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <getopt.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/types.h>
@@ -127,6 +126,8 @@ int main(int argc, char *argv[])
 	int ret = 0;
 	int fd;
 
+	int no_tty = !isatty( fileno(stdout) );
+
 	fd = open(device, O_RDWR);
 	if (fd < 0)
 		pabort("can't open device");
@@ -164,9 +165,9 @@ int main(int argc, char *argv[])
 	if (ret == -1)
 		pabort("can't get max speed hz");
 
-	printf("spi mode: %d\n", mode);
-	printf("bits per word: %d\n", bits);
-	printf("max speed: %d Hz (%d KHz)\n", speed, speed/1000);
+	fprintf(stderr, "spi mode: %d\n", mode);
+	fprintf(stderr, "bits per word: %d\n", bits);
+	fprintf(stderr, "max speed: %d Hz (%d KHz)\n", speed, speed/1000);
 
 	// enable master clock for the AD
 	// divisor results in roughly 4.9MHz
@@ -201,7 +202,14 @@ int main(int argc, char *argv[])
 	  writeReg(fd,0x38);
 	  // read the data register by performing two 8 bit reads
 	  int value = readData(fd)-0x8000;
-	  fprintf(stderr,"data = %d       \r",value);
+		fprintf(stderr,"data = %d       \r",value);
+
+		// if stdout is redirected to a file or pipe, output the data
+		if( no_tty )
+		{
+			printf("%d\n", value);
+			fflush(stdout);
+		}
 	}
 
 	close(fd);
